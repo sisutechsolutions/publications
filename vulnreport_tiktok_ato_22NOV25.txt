@@ -1,0 +1,59 @@
+
+REPORT: Critical Account Takeover (ATO) Vulnerability Via Recycled Phone Number and Flawed Deactivation Logic
+AUTHOR: Paul Lehto
+ICOD: 8/13/2025 (11:38 a.m. EST)
+PUBLISHED: 11/22/2025 
+
+SUMMARY: A critical multi-factor authentication (MFA) bypass vulnerability was discovered in the TikTok web application via Google Chrome browser. This issue allows an unauthenticated attacker to gain full control of a user's account via a recycled phone number and intercepting the required SMS authentication code for new account creation. This vulnerability could lead to a complete account takeover, allowing the attacker to post content, access private information, and interact with other users as if they were the legitimate account holder.
+
+1. VULNERABILITY MECHANISM: The failure points to handling the transfer of a phone number from one user to another and disassociating the number from the original user's account when the number was deactivated or reissued. 
+
+2. ROOT CAUSE ANALYSIS: Improper Database Slate Management
+- The user’s account could be flagged as “active” or “unverified”, but the phone number entry was never permanently cleared from the account credentials. 
+- Upon new account creation, the system found the associated phone number with the original user account. Due to the logic flaw, the system handled the successful SMS verification as a valid login for the original user account. 
+
+
+TABLE 1: ROOT CAUSE ANALYSIS: COMPONENT ANALYSIS AND IMPACT
+COMPONENTDETAILSIMPACTRecycled NumberThe vulnerability is confirmed to be triggered by the system's failure to clear the number's association to the original user's UID (User ID) after the number was recycled.This points directly to Improper Access Control and Data Leakage via the most critical asset: the user's identity.Scope EscalationThis bug affects all users on the platform whose phone numbers have been, or will be, recycled by a mobile carrier, opening them up to passive, low-effort account takeover.This shows the vulnerability's massive scale, covering potentially millions of accounts over time.Logic FlawThe system logic is flawed because it treats a successful OTP (One-Time Password) from a new SIM card as sufficient proof of identity for the original, possibly dormant, account, without requiring the old account's password or email confirmation.This demonstrates a clear Broken Authentication mechanism, bypassing the need for a secondary factor like a password.Privacy AssuranceI logged out immediately upon verifying the takeover and took no action other than documenting the original user's profile name to ensure the bug was reported to the correct asset. All POCs were scrubbed of facial recognition and other PII. No private data was accessed or exfiltrated.I took diligent measures to ensure privacy and confidentiality of the owner of the compromised user account. 
+
+
+3. VERIFICATION: The phone number used for the test was obtained from a US carrier after recycling/re-assignment, confirming it was a recycled number that failed to be de-associated with the user account. The new account creation process includes a phone number field, to which an SMS MFA request was sent. The OTP entry was successful and granted full access to an existing user account. The failure to de-associate the recycled number from the account confirms this vulnerability. It relies on the system’s failure to securely handle the recycling of phone numbers. 
+
+4. TECHNICAL CONTEXT:
+- App/Client Version (PC): Google Chrome Web Browser (Version 142.0.7444.176 Official Build 64-bit)
+- Operating System (PC): Windows Home 11 (Build 26200.7019)
+- Cellular Device: Samsung Galaxy S21 FE 5G (Model SM-G990U)
+- Operating System (Cell): Android v.16  
+- Carrier/Region: Straight Talk Wireless (North Carolina)
+- Time of Attempt: 11:27 a.m. (EST) on 8/13/2025 
+
+
+
+5. PROOF OF CONCEPT: 
+FIGURE 1: SMS Verification Code Acceptance and Dashboard Access
+This device received the OTP intended for the previous owner, granting unauthenticated access to the account dashboard. (All PII is redacted.)
+
+FIGURE 2: Account Takeover Confirmation
+Successful OTP check granted unauthenticated access to the user account dashboard.
+
+VIDEO LINK: A full video demonstration of the reproduction steps is available at the following link: https://youtu.be/C-F-Wqj46cs
+Note: This video has been scrubbed for privacy, is unlisted and provided for educational purposes only.
+
+6. SECURITY FRAMEWORK IDENTIFIERS:
+TABLE 2: CVSS v3.1 Vector (Severity Scoring)
+MetricValueRationaleAttack Vector (AV)N (Network)Exploitation occurs over a network protocol (SMS/API requests).Attack Complexity (AC)L (Low)The only condition is acquiring a recycled number (a simple purchase/reassignment) and entering the OTP.Privileges Required (PR)N (None)No prior account or privileges are needed to initiate the attack.User Interaction (UI)N (None)The user (victim) does not need to perform any action; the attacker only needs the SMS code.Scope (S)U (Unchanged)The impact is limited to the user's account; it doesn't break out to the underlying system.Confidentiality (C)H (High)Full access to private user data (messages, drafts, PII).Integrity (I)H (High)Attacker can post content, change the password/email, and lock out the user.Availability (A)H (High)Attacker can cause a denial of service to the original user (lockout/account deletion).
+Calculated Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+CVSS Base Score: 9.8 (Critical)
+
+
+TABLE 3: MITRE ATT&CK Mapping (Adversarial Context): Credential Access and Persistence 
+TacticTechnique IDTechnique NameRelevanceCredential AccessT1552.001Credentials from Input/Output – SMSThe attacker gains access to the one-time password (the credential) via the SMS channel.Initial AccessT1199Trusted RelationshipThe attacker is leveraging the platform's trust in the phone number as a verified identifier belonging to the original user.PersistenceT1098Account ManipulationOnce in, the attacker can change the account's primary email/password to maintain access, achieving full Account Takeover (ATO).
+TABLE 4: OWASP Top 10 (High-Level Category)
+CWEDescriptionA07:2021 (Identification and Authentication Failures)Has missing or ineffective multi-factor authentication mechanisms
+CWE-640 (Weak Password Recovery Mechanism for Forgotten Password)User account recovery/password change without original passwordCWE-302 (Authentication Bypass by Assumed-Immutable Data)Key data elements assumed immutable, but can be controlled or modified
+7. ANALYST COMMENTS: My discovery of this vulnerability was spontaneous. My original intentions were to create a Tiktok account for marketing a new online business I had created. I used Chrome browser to begin the registration process and entered my business email and cell number. This triggered an SMS MFA request to my cell phone, and after entering the OTP I was redirected to an existing Tiktok account. Upon discovery I was able to view the user account dashboard with full access. I replicated the process to test my theory whether this was a fluke or indeed a vulnerability. With the mechanism clear, I documented the process to include POCs, being careful to censor any PII associated with the account. I then promptly logged out of the compromised account. Afterwards I created a report and submitted it to Tiktok via HackerOne. The security team at TikTok reviewed it and marked it as “Informational” and closed the ticket. I’ve published this vulnerability after a 90-day waiting period. All steps have been taken to ensure this matter was handled ethically and professionally with all parties involved.  
+
+8. REFERENCES:
+Reference TypeSource/Citation InformationSystemic Risk (Academic)Princeton University: McDonald, Allison, et al. "Security and Privacy Risks of Number Recycling at Mobile Carriers in the United States." This study found 66% of sampled recycled numbers were still tied to old accounts. (source: https://recyclednumbers.cs.princeton.edu)Systemic Risk (Industry)FCC/Industry Data: Approximately 35 million phone numbers are reassigned each year in the U.S., establishing the high-risk attack surface. (source: https://www.fcc.gov/reassigned-numbers-database)CVSS StandardFIRST: Forum of Incident Response and Security Teams. Common Vulnerability Scoring System v3.1 Specification. (source: https://www.first.org/cvss/v3-1/specification-document)MITRE ATT&CKMITRE: ATT&CK® Technique T1098: Account Manipulation and T1552.001: Credentials from Input/Output - SMS. (source: https://attack.mitre.org/techniques/T1098/)OWASP/CWEOWASP Foundation: OWASP Top 10 - 2021: A07 - Identification and Authentication Failures. (source: https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/)
+MITRE: CWE-640: Weak Password Recovery Mechanism for Forgotten Password. (source: https://cwe.mitre.org/data/definitions/640.html)
+MITRE: CWE-284: Improper Access Control (source: https://cwe.mitre.org/data/definitions/284.html)
